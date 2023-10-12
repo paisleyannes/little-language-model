@@ -3,66 +3,72 @@ name: ngram.py
 authors: Paisley Annes
 date: 4/11/2023
 
-n-gram language model using my favorite book (Throne of Glass by Sarah J. Maas)
+n-gram language model which simulates a sentence from the input txt file 
 
-code generates random text using markov chain algorithm based on input text 
+code generates random text using markov chain algorithm based on randomly selected first 2 words
 
 '''
 
 import re
 import random
 
+
 def read_file(filename):
     '''This function reads a file and returns the contents'''
+    try:
+        with open(filename, 'r', encoding="utf8") as file:
+            contents = file.read()
+        return contents
+    except FileNotFoundError:
+        print(f"Error: File '{filename}' not found.")
+        return None
 
-    file = open(filename, 'r', encoding="utf8")
-    # file = open(filename, 'r')
+def process_text(text):
+    '''This function processes the text and returns a list of words'''
+    # Convert to lowercase, replace characters, and split into words
+    text = text.lower().replace("'", "").replace('.', 'EOS')
+    text = re.sub('[^A-Za-z]+', ' ', text)
+    return text.split()
 
-    contents = file.read()
+def generate_random_text(words, max_output, gram=3):  # Increased n-gram order to 3
+    unique_words = {}
 
-    file.close()
+    # Build the Markov chain dictionary
+    for i in range(len(words) - gram):
+        key = " ".join(words[i:i + gram])
+        if key not in unique_words:
+            unique_words[key] = [words[i + gram]]
+        else:
+            unique_words[key].append(words[i + gram])
 
-    return contents
+    # Select a random starting point
+    random_start = random.randint(0, len(words) - gram)
+    output = " ".join(words[random_start:random_start + gram])
+    print("searching with:", output)
 
+    next_word = ""
 
-text = read_file('throne1.txt')
+    # Generate random text using the Markov chain
+    while len(output) < max_output:
+        last_words = " ".join(output.split(' ')[-gram:])
+        if last_words in unique_words:
+            # Use a probabilistic approach based on word frequencies
+            next_word = random.choice(unique_words[last_words])
+        # Check if the next word is 'EOS' and handle accordingly
+            if next_word == 'EOS':
+                break  # Stop generating if 'EOS' is encountered
+        else:
+            break  # Stop generating if the last n-gram is not in the dictionary
+        output += " " + next_word
 
-# split the text into a list of words
-text = text.lower().replace("'", "").replace('.', 'EOS')
-text = re.sub('[^A-Za-z]+', ' ', text)
-words = text.split()
+    print(output.replace("EOS", "."))
 
-# create an empty list to store unique words
-unique_words = {}
+def main(filename, max_output):
+    text = read_file(filename)
 
-# markov chain will use 2 words to predict the next word
-gram = 2
+    if text:
+        words = process_text(text)
+        generate_random_text(words, max_output)
 
-# For each pair of consecutive words, loop checks if  pair is already in the dictionary
-for i in range(len(words)- gram):
-    key = words[i] + " " + words[i+1]
-    
-    # If pair is not, a new list with the next word is created. 
-    if key not in unique_words:
-        unique_words[key] = [words[i + gram]]
-    # If pair is already in the dictionary, the program appends the next word to the list
-    else:
-        unique_words[key].append(words[i + gram])
-
-# random starting point in text 
-random_start = random.randint(0, len(words) - gram)
-output = " ".join(words[random_start:random_start + gram]) # joins random sequence of 2 words
-print("searching with: ", output) # output words initiates loop which generates rest of sentence
-next_word = ""
-
-# Selects the last two words of the current output and uses them to look up the list of possible next words in unique_words dictionary
-while len(output) < 300:
-
-    last_words = " ".join(output.split(' ')[-gram:])
-
-    if last_words in unique_words:
-        next_word = random.choice(unique_words[last_words])
-    
-    output += " " + next_word
-
-print(output.replace("EOS", "."))
+if __name__ == "__main__":
+    main("throne1.txt", 300)
